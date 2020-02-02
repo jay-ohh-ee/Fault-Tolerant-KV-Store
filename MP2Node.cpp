@@ -57,6 +57,7 @@ void MP2Node::updateRing() {
 	 * Step 3: Run the stabilization protocol IF REQUIRED
 	 */
 	// Run stabilization protocol if the hash table size is greater than zero and if there has been a changed in the ring
+	stabilizationProtocol();
 }
 
 /**
@@ -108,9 +109,24 @@ size_t MP2Node::hashFunction(string key) {
  * 				3) Sends a message to the replica
  */
 void MP2Node::clientCreate(string key, string value) {
-	/*
-	 * Implement this
-	 */
+	// Increment the global transaction Id 
+	g_transID++;
+
+	// Get the repicas for the key
+	vector<Node> replicas = findNodes(key);
+
+	int replicaType = 0;
+	// Loop through the replicas and create a message for each one.
+	// Use the for-loop variable to access the proper enum value for ReplicationType
+	for(auto &&node: replicas) {
+		// create message
+		Message createMsg = Message(g_transID, this->memberNode->addr, CREATE, key, value, ReplicaType(replicaType));
+		// send message to emulnet
+		this->emulNet->ENsend(&memberNode->addr, &node.nodeAddress, (char*) &createMsg, sizeof(createMsg));
+		// increase to next ReplicaType
+		replicaType++;
+	}
+
 }
 
 /**
@@ -123,9 +139,20 @@ void MP2Node::clientCreate(string key, string value) {
  * 				3) Sends a message to the replica
  */
 void MP2Node::clientRead(string key){
-	/*
-	 * Implement this
-	 */
+	// Increment the global transaction Id 
+	g_transID++;
+
+	// Get the repicas for the key
+	vector<Node> replicas = findNodes(key);
+
+	// Loop through the replicas and create a message for each one.
+	// Use the for-loop variable to access the proper enum value for ReplicationType
+	for(auto &&node: replicas) {
+		// create message
+		Message readMsg = Message(g_transID, this->memberNode->addr, READ, key);
+		// send message to emulnet
+		this->emulNet->ENsend(&memberNode->addr, &node.nodeAddress, (char*) &readMsg, sizeof(readMsg));		
+	}
 }
 
 /**
@@ -138,9 +165,23 @@ void MP2Node::clientRead(string key){
  * 				3) Sends a message to the replica
  */
 void MP2Node::clientUpdate(string key, string value){
-	/*
-	 * Implement this
-	 */
+	// Increment the global transaction Id 
+	g_transID++;
+
+	// Get the repicas for the key
+	vector<Node> replicas = findNodes(key);
+
+	int replicaType = 0;
+	// Loop through the replicas and create a message for each one.
+	// Use the for-loop variable to access the proper enum value for ReplicationType
+	for(auto &&node: replicas) {
+		// create message
+		Message updateMsg = Message(g_transID, this->memberNode->addr, UPDATE, key, value, ReplicaType(replicaType));
+		// send message to emulnet
+		this->emulNet->ENsend(&memberNode->addr, &node.nodeAddress, (char*) &updateMsg, sizeof(updateMsg));
+		// increase to next ReplicaType
+		replicaType++;
+	}
 }
 
 /**
@@ -153,9 +194,20 @@ void MP2Node::clientUpdate(string key, string value){
  * 				3) Sends a message to the replica
  */
 void MP2Node::clientDelete(string key){
-	/*
-	 * Implement this
-	 */
+	// Increment the global transaction Id 
+	g_transID++;
+
+	// Get the repicas for the key
+	vector<Node> replicas = findNodes(key);
+
+	// Loop through the replicas and create a message for each one.
+	// Use the for-loop variable to access the proper enum value for ReplicationType
+	for(auto &&node: replicas) {
+		// create message
+		Message deleteMsg = Message(g_transID, this->memberNode->addr, DELETE, key);
+		// send message to emulnet
+		this->emulNet->ENsend(&memberNode->addr, &node.nodeAddress, (char*) &deleteMsg, sizeof(deleteMsg));
+	}
 }
 
 /**
@@ -167,10 +219,8 @@ void MP2Node::clientDelete(string key){
  * 			   	2) Return true or false based on success or failure
  */
 bool MP2Node::createKeyValue(string key, string value, ReplicaType replica) {
-	/*
-	 * Implement this
-	 */
 	// Insert key, value, replicaType into the hash table
+	return ht->create(key, value);
 }
 
 /**
@@ -182,10 +232,8 @@ bool MP2Node::createKeyValue(string key, string value, ReplicaType replica) {
  * 			    2) Return value
  */
 string MP2Node::readKey(string key) {
-	/*
-	 * Implement this
-	 */
 	// Read key from local hash table and return value
+	return ht->read(key);
 }
 
 /**
@@ -197,10 +245,8 @@ string MP2Node::readKey(string key) {
  * 				2) Return true or false based on success or failure
  */
 bool MP2Node::updateKeyValue(string key, string value, ReplicaType replica) {
-	/*
-	 * Implement this
-	 */
 	// Update key in local hash table and return true or false
+	return ht->update(key, value);
 }
 
 /**
@@ -212,10 +258,8 @@ bool MP2Node::updateKeyValue(string key, string value, ReplicaType replica) {
  * 				2) Return true or false based on success or failure
  */
 bool MP2Node::deletekey(string key) {
-	/*
-	 * Implement this
-	 */
-	// Delete the key from the local hash table
+	// Delete the key from the local hash table and return true of false
+	return ht->deleteKey(key);
 }
 
 /**
