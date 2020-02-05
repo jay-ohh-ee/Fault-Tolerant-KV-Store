@@ -295,6 +295,29 @@ void MP2Node::checkMessages() {
 		/*
 		 * Handle the message types here
 		 */
+	
+		// Create a message wrapper class to hold all fields (key and value).
+		// The below attempt only allows for fromAddr, replica, success, transID, type fields.
+		Message curMsg;
+		memcpy(&curMsg, data, size);
+
+		switch(curMsg.type) {
+			case CREATE:
+			// Node received a create message.  Insert the message (createKeyValue).
+			// Create a new message of type (REPLY and send it back to the fromAddr).
+			// Log the success or failure of the message 
+			case READ:
+			//
+			case UPDATE:
+			//
+			case DELETE:
+			//
+			case REPLY:
+			//
+			case READREPLY:
+			//
+		}
+
 
 	}
 

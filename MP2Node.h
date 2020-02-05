@@ -91,4 +91,17 @@ public:
 	~MP2Node();
 };
 
+// Wrapper class for the message and added function
+class WrapperMessage {
+	public:
+		WrapperMessage();
+		MessageType msgType;
+		Message replicaType;
+		string key;
+		string value;
+		Address fromAddr;
+		int transID;
+		bool success;
+}
+
 #endif /* MP2NODE_H_ */
