@@ -92,16 +92,17 @@ public:
 };
 
 // Wrapper class for the message and added function
+// https://www.geeksforgeeks.org/when-do-we-use-initializer-list-in-c/
 class WrapperMessage {
 	public:
-		WrapperMessage();
 		MessageType msgType;
-		Message replicaType;
+		ReplicaType replicaType;
 		string key;
 		string value;
 		Address fromAddr;
 		int transID;
 		bool success;
+		WrapperMessage(MessageType mt):  {};
 }
 
 #endif /* MP2NODE_H_ */

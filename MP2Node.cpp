@@ -303,19 +303,31 @@ void MP2Node::checkMessages() {
 
 		switch(curMsg.type) {
 			case CREATE:
-			// Node received a create message.  Insert the message (createKeyValue).
-			// Create a new message of type (REPLY and send it back to the fromAddr).
-			// Log the success or failure of the message 
+				// Insert the message (createKeyValue).
+				bool isSuccess = createKeyValue(curMsg.key, curMsg.val, curMsg.replica);
+				// Create a new message of type REPLY -- Consider modifying message
+				// so reply message can be explicit by type instead of implicit by parameters.
+				Message newMsg = Message(curMsg.transID, this->memberNode->addr, isSuccess);  
+				 and send it back to the fromAddr).
+				// Log the success or failure of the message 
 			case READ:
-			//
+				// Get the value of the key in the hash table
+				string value = readKey(curMsg.key);
+				if(value == "") {
+					// Handle no key
+				} else {
+					// Handle the value
+				}
 			case UPDATE:
-			//
+				//
+				bool isSuccess = updateKeyValue(curMsg.key, curMsg.val, curMsg.replica);
 			case DELETE:
-			//
+				//
+				bool isSuccess = createKeyValue(curMsg.key, curMsg.val, curMsg.replica);
 			case REPLY:
-			//
+				//
 			case READREPLY:
-			//
+				//
 		}
 
 
