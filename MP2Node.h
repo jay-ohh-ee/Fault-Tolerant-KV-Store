@@ -91,18 +91,39 @@ public:
 	~MP2Node();
 };
 
+class MessageMetadata {
+	public:
+		MessageType msgType;
+		ReplicaType replicaType;
+		int transID;
+		bool success;
+		MessageMetadata(){ }
+};
+
+class MessageData {
+	public:
+		string key;
+		string value;
+		Address fromAddr;	
+		MessageData();
+		MessageData(string k, string v): key(k), value(v) { }
+		MessageData(string k, string v, Address addr): key(k), value(v), fromAddr(addr) { }
+};
+
 // Wrapper class for the message and added function
 // https://www.geeksforgeeks.org/when-do-we-use-initializer-list-in-c/
 class WrapperMessage {
 	public:
-		MessageType msgType;
-		ReplicaType replicaType;
-		string key;
-		string value;
-		Address fromAddr;
-		int transID;
-		bool success;
-		WrapperMessage(MessageType mt):  {};
-}
+		// MessageType msgType;
+		// ReplicaType replicaType;
+		// string key;
+		// string value;
+		// Address fromAddr;
+		// int transID;
+		// bool success;
+		MessageData msgData;
+		MessageMetadata msgMeta;
+		WrapperMessage();
+};
 
 #endif /* MP2NODE_H_ */

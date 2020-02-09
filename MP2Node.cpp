@@ -297,37 +297,61 @@ void MP2Node::checkMessages() {
 		 */
 	
 		// Create a message wrapper class to hold all fields (key and value).
+		// Need to have a default constructor
 		// The below attempt only allows for fromAddr, replica, success, transID, type fields.
-		Message curMsg;
+		// Message curMsg;
+		WrapperMessage curMsg;
+		// memcpy(&curMsg, data, size);
 		memcpy(&curMsg, data, size);
-
-		switch(curMsg.type) {
-			case CREATE:
+		// http://www.cplusplus.com/forum/general/68994/
+		switch(curMsg.msgMeta.msgType) {
+			case CREATE: {
 				// Insert the message (createKeyValue).
-				bool isSuccess = createKeyValue(curMsg.key, curMsg.val, curMsg.replica);
+				bool isSuccess = createKeyValue(curMsg.msgData.key, curMsg.msgData.value, curMsg.msgMeta.replicaType);
 				// Create a new message of type REPLY -- Consider modifying message
 				// so reply message can be explicit by type instead of implicit by parameters.
-				Message newMsg = Message(curMsg.transID, this->memberNode->addr, isSuccess);  
-				 and send it back to the fromAddr).
-				// Log the success or failure of the message 
-			case READ:
+				// Message newMsg = Message(curMsg.transID, this->memberNode->addr, isSuccess);  
+				// Create a new message based on the current message that was received.
+				// Update the messageType to reply
+				WrapperMessage replyMsg = curMsg;
+				replyMsg.msgMeta.msgType = REPLY;
+				//newMsg.msgData.fromAddr = this->memberNode->addr;
+				// newMsg.msgMeta.transID = 
+				// send it back to the fromAddr.
+				this->emulNet->ENsend(&this->memberNode->addr, &replyMsg.msgData.fromAddr, (char *)&replyMsg, (int)sizeof(replyMsg));
+				// Log the success or failure of the message
+				break;
+			} 
+			case READ: {
 				// Get the value of the key in the hash table
-				string value = readKey(curMsg.key);
-				if(value == "") {
+				WrapperMessage replyMsg = curMsg;
+				string retValue = readKey(curMsg.msgData.key);
+				if(retValue == "") {
 					// Handle no key
 				} else {
 					// Handle the value
 				}
-			case UPDATE:
+			}
+			case UPDATE: {
 				//
-				bool isSuccess = updateKeyValue(curMsg.key, curMsg.val, curMsg.replica);
-			case DELETE:
+				bool isSuccess = updateKeyValue(curMsg.msgData.key, curMsg.msgData.value, curMsg.msgMeta.replicaType);
+				WrapperMessage replyMsg = curMsg;
+				replyMsg.msgMeta.msgType = REPLY;
+			}
+			case DELETE: {
 				//
-				bool isSuccess = createKeyValue(curMsg.key, curMsg.val, curMsg.replica);
-			case REPLY:
-				//
-			case READREPLY:
-				//
+				bool isSuccess = createKeyValue(curMsg.msgData.key, curMsg.msgData.value, curMsg.msgMeta.replicaType);
+				WrapperMessage replyMsg = curMsg;
+				replyMsg.msgMeta.msgType = REPLY;
+			}
+			case REPLY: {
+				// Check for quorum for the transID of the reply for updates.
+				WrapperMessage replyMsg = curMsg;
+			}
+			case READREPLY: {
+				// Check for quorum for the transID of the read-reply for reads.
+				WrapperMessage replyMsg = curMsg;
+			}
 		}
 
 
