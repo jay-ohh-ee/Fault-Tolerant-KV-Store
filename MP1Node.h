@@ -29,9 +29,10 @@
  * Message Types
  */
 enum MsgTypes{
-    JOINREQ,
-    JOINREP,
-    DUMMYLASTMSGTYPE
+    JOINREQ = 0,
+    JOINREP = 1,
+    GOSSIP = 2,
+    DUMMYLASTMSGTYPE = 3
 };
 
 /**
@@ -42,6 +43,36 @@ enum MsgTypes{
 typedef struct MessageHdr {
 	enum MsgTypes msgType;
 }MessageHdr;
+
+/**
+ * STRUCT NAME: JoinReqContent
+ *
+ * DESCRIPTION: The content of a JoinReq message (the node's address and heartbeat) 
+ */
+typedef struct JoinReqContent {
+    char addr[6];
+    long heartbeat;
+}JoinReqContent;
+
+/**
+ * STRUCT NAME: GossipContent
+ *
+ * DESCRIPTION: The content of a gossip message (membership list)
+ */
+typedef struct GossipContent {
+    long memberCount;
+    MemberListEntry memberList[1];
+}GossipContent;
+
+typedef union MessageContent {
+   JoinReqContent joinReqContent;
+   GossipContent gossipContent;
+}MessageContent;
+
+typedef struct Message {
+    MessageHdr msgHdr;
+    MessageContent msgContent;
+}Message;
 
 /**
  * CLASS NAME: MP1Node
@@ -55,7 +86,7 @@ private:
 	Params *par;
 	Member *memberNode;
 	char NULLADDR[6];
-
+    // int timestamp;
 public:
 	MP1Node(Member *, Params *, EmulNet *, Log *, Address *);
 	Member * getMemberNode() {
@@ -76,6 +107,21 @@ public:
 	void initMemberListTable(Member *memberNode);
 	void printAddress(Address *addr);
 	virtual ~MP1Node();
+private:
+
+    vector<int> *membersToRemoveList;
+
+    void receivedJoinReq(Member *memberNode, JoinReqContent *mesg_data);
+	void receivedJoinRep(Member *memberNode);
+    void receivedJoinRep(Member *memberNode, GossipContent *gossip_mesg);
+    void receivedGossipMessage(Member *memberNode, GossipContent *gossip_mesg);
+    void sendJoinRep(Address *addr);
+	void sendMemberList(Address *addr);
+    void sendGossipMessage(Address *addr);
+    MemberListEntry *getMemberById(int id);
+    void identifyAndRemoveFailedNodes();
+
+
 };
 
 #endif /* _MP1NODE_H_ */
