@@ -308,6 +308,12 @@ void MP2Node::checkMessages() {
 			case CREATE: {
 				// Insert the message (createKeyValue).
 				bool isSuccess = createKeyValue(curMsg.msgData.key, curMsg.msgData.value, curMsg.msgMeta.replicaType);
+				// Log the success or failure of the message.  This is not the coordinator as it is getting message from coordinator.
+				if(isSuccess) {
+					this->log->logCreateSuccess(&this->memberNode->addr, false, curMsg.msgMeta.transID, curMsg.msgData.key, curMsg.msgData.value);
+				} else {
+					this->log->logCreateFail(&this->memberNode->addr, false, curMsg.msgMeta.transID, curMsg.msgData.key, curMsg.msgData.value);
+				}
 				// Create a new message of type REPLY -- Consider modifying message
 				// so reply message can be explicit by type instead of implicit by parameters.
 				// Message newMsg = Message(curMsg.transID, this->memberNode->addr, isSuccess);  
@@ -319,38 +325,61 @@ void MP2Node::checkMessages() {
 				// newMsg.msgMeta.transID = 
 				// send it back to the fromAddr.
 				this->emulNet->ENsend(&this->memberNode->addr, &replyMsg.msgData.fromAddr, (char *)&replyMsg, (int)sizeof(replyMsg));
-				// Log the success or failure of the message
 				break;
 			} 
 			case READ: {
 				// Get the value of the key in the hash table
 				WrapperMessage replyMsg = curMsg;
+				replyMsg.msgMeta.msgType = READREPLY;
 				string retValue = readKey(curMsg.msgData.key);
+				replyMsg.msgData.value = retValue;
 				if(retValue == "") {
 					// Handle no key
+					replyMsg.msgMeta.success = false;
+					this->log->logReadFail(&this->memberNode->addr, false, curMsg.msgMeta.transID, curMsg.msgData.key);
 				} else {
 					// Handle the value
+					replyMsg.msgMeta.success = true;
+					this->log->logReadSuccess(&this->memberNode->addr, false, curMsg.msgMeta.transID, curMsg.msgData.key, curMsg.msgData.value);
 				}
+				// Send message back to the user with returned value and READREPLY msgType
+				this->emulNet->ENsend(&this->memberNode->addr, &replyMsg.msgData.fromAddr, (char *)&replyMsg, (int)sizeof(replyMsg));
 			}
 			case UPDATE: {
-				//
 				bool isSuccess = updateKeyValue(curMsg.msgData.key, curMsg.msgData.value, curMsg.msgMeta.replicaType);
 				WrapperMessage replyMsg = curMsg;
 				replyMsg.msgMeta.msgType = REPLY;
+				replyMsg.msgMeta.success = isSuccess;
+				if(isSuccess) {
+					this->log->logUpdateSuccess(&this->memberNode->addr, false, curMsg.msgMeta.transID, curMsg.msgData.key, curMsg.msgData.value);
+				} else {
+					this->log->logUpdateFail(&this->memberNode->addr, false, curMsg.msgMeta.transID, curMsg.msgData.key, curMsg.msgData.value);
+				}
+
+				this->emulNet->ENsend(&this->memberNode->addr, &replyMsg.msgData.fromAddr, (char *)&replyMsg, (int)sizeof(replyMsg));
 			}
 			case DELETE: {
-				//
 				bool isSuccess = createKeyValue(curMsg.msgData.key, curMsg.msgData.value, curMsg.msgMeta.replicaType);
 				WrapperMessage replyMsg = curMsg;
 				replyMsg.msgMeta.msgType = REPLY;
+				replyMsg.msgMeta.success = isSuccess;
+				if(isSuccess) {
+					this->log->logDeleteSuccess(&this->memberNode->addr, false, curMsg.msgMeta.transID, curMsg.msgData.key);
+				} else {
+					this->log->logDeleteFail(&this->memberNode->addr, false, curMsg.msgMeta.transID, curMsg.msgData.key);
+				}
+				this->emulNet->ENsend(&this->memberNode->addr, &replyMsg.msgData.fromAddr, (char *)&replyMsg, (int)sizeof(replyMsg));
 			}
 			case REPLY: {
 				// Check for quorum for the transID of the reply for updates.
 				WrapperMessage replyMsg = curMsg;
+				this->emulNet->ENsend(&this->memberNode->addr, &replyMsg.msgData.fromAddr, (char *)&replyMsg, (int)sizeof(replyMsg));
 			}
 			case READREPLY: {
 				// Check for quorum for the transID of the read-reply for reads.
+				// Create helper method for checking for quorum.  Shouldn't have code directly in READREPLY or REPLY cases.
 				WrapperMessage replyMsg = curMsg;
+				this->emulNet->ENsend(&this->memberNode->addr, &replyMsg.msgData.fromAddr, (char *)&replyMsg, (int)sizeof(replyMsg));
 			}
 		}
 
@@ -431,4 +460,10 @@ void MP2Node::stabilizationProtocol() {
 	/*
 	 * Implement this
 	 */
+
+	// One approach is to go through every key in the hashtable.  Find the nodes associated for that key.
+	// Check to see if the Secondary/Tertiary nodes have the proper values.  If not send them a request.  
+	// Consider nodes that have been down previously as well as nodes that might be down currently.  
+	// Need to consider keys that are in the hashtable that are also being held when the current node
+	// in scope is either Secondary/Tertiary replicaType.  Come back to this and consider helper methods.
 }
