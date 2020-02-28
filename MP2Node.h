@@ -20,6 +20,26 @@
 #include "Queue.h"
 
 /**
+ * This is a struct that is used to hold all required data for a specific transaction.  
+ * This is helpful for determining a quorum.  Given that messages are asynchronous they will not necessarily
+ * arrive all at once and rather than continuously go back and recover the messages for each transaction this
+ * structure will be much quicker to reference.
+ */
+typedef struct TransactionData {
+	MessageType msgType;
+	string key;
+	string value;
+	int failureReplyCount;
+	int successReplyCount;
+	bool isFailed;
+	bool isCommitted;
+	vector<Address> failedAddrs;
+	vector<Address> successfulAddrs;
+	int transId;
+} TransactionData;
+
+
+/**
  * CLASS NAME: MP2Node
  *
  * DESCRIPTION: This class encapsulates all the key-value store functionality
@@ -47,6 +67,8 @@ private:
 	EmulNet * emulNet;
 	// Object of Log
 	Log * log;
+	// A mapping of all the different data for each transaction
+	map<int, TransactionData> transactionHistory;
 
 public:
 	MP2Node(Member *memberNode, Params *par, EmulNet *emulNet, Log *log, Address *addressOfMember);
@@ -97,6 +119,7 @@ class MessageMetadata {
 		ReplicaType replicaType;
 		int transID;
 		bool success;
+		long timeStamp;
 		MessageMetadata(){ }
 };
 

@@ -296,15 +296,13 @@ void MP2Node::checkMessages() {
 		 * Handle the message types here
 		 */
 	
-		// Create a message wrapper class to hold all fields (key and value).
 		// Need to have a default constructor
-		// The below attempt only allows for fromAddr, replica, success, transID, type fields.
-		// Message curMsg;
 		WrapperMessage curMsg;
 		// memcpy(&curMsg, data, size);
 		memcpy(&curMsg, data, size);
 		// http://www.cplusplus.com/forum/general/68994/
 		switch(curMsg.msgMeta.msgType) {
+			// When here node is replica.
 			case CREATE: {
 				// Insert the message (createKeyValue).
 				bool isSuccess = createKeyValue(curMsg.msgData.key, curMsg.msgData.value, curMsg.msgMeta.replicaType);
@@ -314,7 +312,7 @@ void MP2Node::checkMessages() {
 				} else {
 					this->log->logCreateFail(&this->memberNode->addr, false, curMsg.msgMeta.transID, curMsg.msgData.key, curMsg.msgData.value);
 				}
-				// Create a new message of type REPLY -- Consider modifying message
+				// Create message of type REPLY
 				// so reply message can be explicit by type instead of implicit by parameters.
 				// Message newMsg = Message(curMsg.transID, this->memberNode->addr, isSuccess);  
 				// Create a new message based on the current message that was received.
@@ -327,6 +325,7 @@ void MP2Node::checkMessages() {
 				this->emulNet->ENsend(&this->memberNode->addr, &replyMsg.msgData.fromAddr, (char *)&replyMsg, (int)sizeof(replyMsg));
 				break;
 			} 
+			// When here node is replica.
 			case READ: {
 				// Get the value of the key in the hash table
 				WrapperMessage replyMsg = curMsg;
@@ -345,6 +344,7 @@ void MP2Node::checkMessages() {
 				// Send message back to the user with returned value and READREPLY msgType
 				this->emulNet->ENsend(&this->memberNode->addr, &replyMsg.msgData.fromAddr, (char *)&replyMsg, (int)sizeof(replyMsg));
 			}
+			// When here node is replica.
 			case UPDATE: {
 				bool isSuccess = updateKeyValue(curMsg.msgData.key, curMsg.msgData.value, curMsg.msgMeta.replicaType);
 				WrapperMessage replyMsg = curMsg;
@@ -358,6 +358,7 @@ void MP2Node::checkMessages() {
 
 				this->emulNet->ENsend(&this->memberNode->addr, &replyMsg.msgData.fromAddr, (char *)&replyMsg, (int)sizeof(replyMsg));
 			}
+			// When here node is replica.
 			case DELETE: {
 				bool isSuccess = createKeyValue(curMsg.msgData.key, curMsg.msgData.value, curMsg.msgMeta.replicaType);
 				WrapperMessage replyMsg = curMsg;
@@ -370,11 +371,13 @@ void MP2Node::checkMessages() {
 				}
 				this->emulNet->ENsend(&this->memberNode->addr, &replyMsg.msgData.fromAddr, (char *)&replyMsg, (int)sizeof(replyMsg));
 			}
+			// When here node is coordinator.
 			case REPLY: {
 				// Check for quorum for the transID of the reply for updates.
 				WrapperMessage replyMsg = curMsg;
 				this->emulNet->ENsend(&this->memberNode->addr, &replyMsg.msgData.fromAddr, (char *)&replyMsg, (int)sizeof(replyMsg));
 			}
+			// When here node is coordinator.
 			case READREPLY: {
 				// Check for quorum for the transID of the read-reply for reads.
 				// Create helper method for checking for quorum.  Shouldn't have code directly in READREPLY or REPLY cases.
@@ -391,6 +394,21 @@ void MP2Node::checkMessages() {
 	 * get QUORUM replies
 	 */
 }
+
+/**
+ * FUNCTION NAME: checkForQuorum
+ * 
+ * DESCRIPTION: This function takes a message and updates the transactionHistory
+ * 				while also checking if the transaction has reached a quorum or not.
+ * 				Help Link: https://thispointer.com/how-to-iterate-over-a-map-in-c/
+ * 						   https://stackoverflow.com/questions/26281979/c-loop-through-map
+ */
+void checkForQuorum(WrapperMessage *msg) {
+	//Get the transactionId
+	int transId = msg->msgMeta.transID;
+	//Check if the 
+}
+
 
 /**
  * FUNCTION NAME: findNodes
