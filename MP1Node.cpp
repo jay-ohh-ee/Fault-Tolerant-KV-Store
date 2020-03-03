@@ -141,11 +141,11 @@ int MP1Node::introduceSelfToGroup(Address *joinaddr) {
         memberNode->inGroup = true;
     }
     else {
-        Message *message = (Message *)malloc(sizeof(Message));
+        mP1NodeMessage *message = (mP1NodeMessage *)malloc(sizeof(mP1NodeMessage));
         message->msgHdr.msgType = JOINREQ;
         memcpy(message->msgContent.joinReqContent.addr, &memberNode->addr.addr, sizeof(memberNode->addr.addr));
         message->msgContent.joinReqContent.heartbeat = 0;
-        size_t msgsize = sizeof(Message);
+        size_t msgsize = sizeof(mP1NodeMessage);
 #ifdef DEBUGLOG
         sprintf(s, "Trying to join...");
         log->LOG(&memberNode->addr, s);
@@ -237,7 +237,7 @@ void MP1Node::checkMessages() {
 bool MP1Node::recvCallBack(void *env, char *data, int size ) {
 
     Member *memberNode = (Member*)env;
-    Message *msg = (Message*)data;
+    mP1NodeMessage *msg = (mP1NodeMessage*)data;
 
     if(msg->msgHdr.msgType == JOINREQ) 
     {
@@ -482,9 +482,9 @@ void MP1Node::printAddress(Address *addr)
  */
 void MP1Node::sendJoinRep(Address *addr)
 {
-    Message *joinRepMessage = (Message *)malloc(sizeof(Message));
+    mP1NodeMessage *joinRepMessage = (mP1NodeMessage *)malloc(sizeof(mP1NodeMessage));
     joinRepMessage->msgHdr.msgType = JOINREP;
-    size_t msgsize = sizeof(Message);
+    size_t msgsize = sizeof(mP1NodeMessage);
     
     // send JOINREP message to the address confirming that they have been added to the memberList.
     emulNet->ENsend(&memberNode->addr, addr, (char *)joinRepMessage, msgsize);
@@ -539,8 +539,8 @@ void MP1Node::sendGossipMessage(Address *addr)
     {
         return;
     }
-    size_t msgSize = sizeof(Message) + (totalMembers - 1) * sizeof(MemberListEntry);
-    Message *gossipMsg = (Message *)malloc(msgSize);
+    size_t msgSize = sizeof(mP1NodeMessage) + (totalMembers - 1) * sizeof(MemberListEntry);
+    mP1NodeMessage *gossipMsg = (mP1NodeMessage *)malloc(msgSize);
     gossipMsg->msgHdr.msgType = GOSSIP;
 
     GossipContent *gossip = &gossipMsg->msgContent.gossipContent;
@@ -572,8 +572,8 @@ void MP1Node::sendMemberList(Address *addr)
     {
         return;
     }
-    size_t msgSize = sizeof(Message) + (totalMembers - 1) * sizeof(MemberListEntry);
-    Message *gossipMsg = (Message *)malloc(msgSize);
+    size_t msgSize = sizeof(mP1NodeMessage) + (totalMembers - 1) * sizeof(MemberListEntry);
+    mP1NodeMessage *gossipMsg = (mP1NodeMessage *)malloc(msgSize);
     gossipMsg->msgHdr.msgType = JOINREP;
 
     GossipContent *gossip = &gossipMsg->msgContent.gossipContent;

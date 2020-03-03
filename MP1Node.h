@@ -69,10 +69,10 @@ typedef union MessageContent {
    GossipContent gossipContent;
 }MessageContent;
 
-typedef struct Message {
+typedef struct MP1NodeMessage {
     MessageHdr msgHdr;
     MessageContent msgContent;
-}Message;
+}mP1NodeMessage;
 
 /**
  * CLASS NAME: MP1Node

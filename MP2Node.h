@@ -18,6 +18,7 @@
 #include "Params.h"
 #include "Message.h"
 #include "Queue.h"
+#include "Params.h"
 
 /**
  * This is a struct that is used to hold all required data for a specific transaction.  
@@ -36,7 +37,38 @@ typedef struct TransactionData {
 	vector<Address> failedAddrs;
 	vector<Address> successfulAddrs;
 	int transId;
+	long timeStamp;
 } TransactionData;
+
+class MessageMetadata {
+	public:
+		MessageType msgType;
+		ReplicaType replicaType;
+		int transID;
+		bool success;
+		long timeStamp;
+		MessageMetadata(){ }
+};
+
+class MessageData {
+	public:
+		string key;
+		string value;
+		Address fromAddr;	
+		MessageData();
+		MessageData(string k, string v): key(k), value(v) { }
+		MessageData(string k, string v, Address addr): key(k), value(v), fromAddr(addr) { }
+};
+
+// Wrapper class for the message and added function
+// https://www.geeksforgeeks.org/when-do-we-use-initializer-list-in-c/
+class WrapperMessage {
+	public:
+		WrapperMessage();
+		MessageData msgData;
+		MessageMetadata msgMeta;
+		
+};
 
 
 /**
@@ -110,43 +142,9 @@ public:
 	// stabilization protocol - handle multiple failures
 	void stabilizationProtocol();
 
+	void addTransactionHistory(string key, string value, MessageType msgType, int transId);
+
 	~MP2Node();
-};
-
-class MessageMetadata {
-	public:
-		MessageType msgType;
-		ReplicaType replicaType;
-		int transID;
-		bool success;
-		long timeStamp;
-		MessageMetadata(){ }
-};
-
-class MessageData {
-	public:
-		string key;
-		string value;
-		Address fromAddr;	
-		MessageData();
-		MessageData(string k, string v): key(k), value(v) { }
-		MessageData(string k, string v, Address addr): key(k), value(v), fromAddr(addr) { }
-};
-
-// Wrapper class for the message and added function
-// https://www.geeksforgeeks.org/when-do-we-use-initializer-list-in-c/
-class WrapperMessage {
-	public:
-		// MessageType msgType;
-		// ReplicaType replicaType;
-		// string key;
-		// string value;
-		// Address fromAddr;
-		// int transID;
-		// bool success;
-		MessageData msgData;
-		MessageMetadata msgMeta;
-		WrapperMessage();
 };
 
 #endif /* MP2NODE_H_ */

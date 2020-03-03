@@ -263,6 +263,24 @@ bool MP2Node::deletekey(string key) {
 }
 
 /**
+ * Functioin Name: updateTransactionHistory
+ * Take four parameters that are pieces of data of the transaction history as well as 
+ * the transactionId that is used as the unique identifier when emplacing the transactionData 
+ * into the transactionHistory map.
+ */
+void MP2Node::addTransactionHistory(string k, string v, MessageType msgType, int transId) {
+	TransactionData td;
+	td.key = k;
+	td.value = v;
+	td.timeStamp = this->par->getcurrtime();
+	td.transId = transId;
+	td.failureReplyCount = 0;
+	td.successReplyCount = 0;
+	td.msgType = msgType;
+	transactionHistory.emplace(transId, td);
+}
+
+/**
  * FUNCTION NAME: checkMessages
  *
  * DESCRIPTION: This function is the message handler of this node.
@@ -297,92 +315,107 @@ void MP2Node::checkMessages() {
 		 */
 	
 		// Need to have a default constructor
-		WrapperMessage curMsg;
-		// memcpy(&curMsg, data, size);
-		memcpy(&curMsg, data, size);
+		//WrapperMessage curMsg;
+		//memcpy(&curMsg, data, size);
+		Message curMsg(message);
 		// http://www.cplusplus.com/forum/general/68994/
-		switch(curMsg.msgMeta.msgType) {
+		switch(curMsg.type) {
 			// When here node is replica.
 			case CREATE: {
+				Message replyMsg = curMsg;
+				//Message replyMsg = curMsg;
 				// Insert the message (createKeyValue).
-				bool isSuccess = createKeyValue(curMsg.msgData.key, curMsg.msgData.value, curMsg.msgMeta.replicaType);
+				bool isSuccess = createKeyValue(curMsg.key, curMsg.value, curMsg.replica);
+				//replyMsg.msgMeta.timeStamp = this->par->getcurrtime();
 				// Log the success or failure of the message.  This is not the coordinator as it is getting message from coordinator.
 				if(isSuccess) {
-					this->log->logCreateSuccess(&this->memberNode->addr, false, curMsg.msgMeta.transID, curMsg.msgData.key, curMsg.msgData.value);
+					this->log->logCreateSuccess(&this->memberNode->addr, false, curMsg.transID, curMsg.key, curMsg.value);
 				} else {
-					this->log->logCreateFail(&this->memberNode->addr, false, curMsg.msgMeta.transID, curMsg.msgData.key, curMsg.msgData.value);
+					this->log->logCreateFail(&this->memberNode->addr, false, curMsg.transID, curMsg.key, curMsg.value);
 				}
 				// Create message of type REPLY
 				// so reply message can be explicit by type instead of implicit by parameters.
 				// Message newMsg = Message(curMsg.transID, this->memberNode->addr, isSuccess);  
 				// Create a new message based on the current message that was received.
 				// Update the messageType to reply
-				WrapperMessage replyMsg = curMsg;
-				replyMsg.msgMeta.msgType = REPLY;
+				replyMsg.type = REPLY;
 				//newMsg.msgData.fromAddr = this->memberNode->addr;
 				// newMsg.msgMeta.transID = 
 				// send it back to the fromAddr.
-				this->emulNet->ENsend(&this->memberNode->addr, &replyMsg.msgData.fromAddr, (char *)&replyMsg, (int)sizeof(replyMsg));
+				this->emulNet->ENsend(&this->memberNode->addr, &replyMsg.fromAddr, (char *)&replyMsg, (int)sizeof(replyMsg));
+				addTransactionHistory(replyMsg.key, replyMsg.value, replyMsg.type, replyMsg.transID);
 				break;
 			} 
 			// When here node is replica.
 			case READ: {
 				// Get the value of the key in the hash table
-				WrapperMessage replyMsg = curMsg;
-				replyMsg.msgMeta.msgType = READREPLY;
-				string retValue = readKey(curMsg.msgData.key);
-				replyMsg.msgData.value = retValue;
+				//WrapperMessage replyMsg = curMsg;
+				Message replyMsg = curMsg;
+				replyMsg.type = READREPLY;
+				string retValue = readKey(curMsg.key);
+				replyMsg.value = retValue;
 				if(retValue == "") {
 					// Handle no key
-					replyMsg.msgMeta.success = false;
-					this->log->logReadFail(&this->memberNode->addr, false, curMsg.msgMeta.transID, curMsg.msgData.key);
+					replyMsg.success = false;
+					this->log->logReadFail(&this->memberNode->addr, false, curMsg.transID, curMsg.key);
 				} else {
 					// Handle the value
-					replyMsg.msgMeta.success = true;
-					this->log->logReadSuccess(&this->memberNode->addr, false, curMsg.msgMeta.transID, curMsg.msgData.key, curMsg.msgData.value);
+					replyMsg.success = true;
+					this->log->logReadSuccess(&this->memberNode->addr, false, curMsg.transID, curMsg.key, curMsg.value);
 				}
+				//replyMsg.msgMeta.timeStamp = this->par->getcurrtime();
 				// Send message back to the user with returned value and READREPLY msgType
-				this->emulNet->ENsend(&this->memberNode->addr, &replyMsg.msgData.fromAddr, (char *)&replyMsg, (int)sizeof(replyMsg));
+				this->emulNet->ENsend(&this->memberNode->addr, &replyMsg.fromAddr, (char *)&replyMsg, (int)sizeof(replyMsg));
+				addTransactionHistory(replyMsg.key, replyMsg.value, replyMsg.type, replyMsg.transID);
+				break;
 			}
 			// When here node is replica.
 			case UPDATE: {
-				bool isSuccess = updateKeyValue(curMsg.msgData.key, curMsg.msgData.value, curMsg.msgMeta.replicaType);
-				WrapperMessage replyMsg = curMsg;
-				replyMsg.msgMeta.msgType = REPLY;
-				replyMsg.msgMeta.success = isSuccess;
+				bool isSuccess = updateKeyValue(curMsg.key, curMsg.value, curMsg.replica);
+				//WrapperMessage replyMsg = curMsg;
+				Message replyMsg = curMsg;
+				// replyMsg.msgMeta.msgType = REPLY;
+				// replyMsg.msgMeta.success = isSuccess;
+				// replyMsg.msgMeta.timeStamp = this->par->getcurrtime();
 				if(isSuccess) {
-					this->log->logUpdateSuccess(&this->memberNode->addr, false, curMsg.msgMeta.transID, curMsg.msgData.key, curMsg.msgData.value);
+					this->log->logUpdateSuccess(&this->memberNode->addr, false, curMsg.transID, curMsg.key, curMsg.value);
 				} else {
-					this->log->logUpdateFail(&this->memberNode->addr, false, curMsg.msgMeta.transID, curMsg.msgData.key, curMsg.msgData.value);
+					this->log->logUpdateFail(&this->memberNode->addr, false, curMsg.transID, curMsg.key, curMsg.value);
 				}
 
-				this->emulNet->ENsend(&this->memberNode->addr, &replyMsg.msgData.fromAddr, (char *)&replyMsg, (int)sizeof(replyMsg));
+				this->emulNet->ENsend(&this->memberNode->addr, &replyMsg.fromAddr, (char *)&replyMsg, (int)sizeof(replyMsg));
+				addTransactionHistory(replyMsg.key, replyMsg.value, replyMsg.type, replyMsg.transID);
 			}
 			// When here node is replica.
 			case DELETE: {
-				bool isSuccess = createKeyValue(curMsg.msgData.key, curMsg.msgData.value, curMsg.msgMeta.replicaType);
-				WrapperMessage replyMsg = curMsg;
-				replyMsg.msgMeta.msgType = REPLY;
-				replyMsg.msgMeta.success = isSuccess;
+				bool isSuccess = createKeyValue(curMsg.key, curMsg.value, curMsg.replica);
+				Message replyMsg = curMsg;
+				replyMsg.type = REPLY;
+				replyMsg.success = isSuccess;
+				//replyMsg.timeStamp = this->par->getcurrtime();
 				if(isSuccess) {
-					this->log->logDeleteSuccess(&this->memberNode->addr, false, curMsg.msgMeta.transID, curMsg.msgData.key);
+					this->log->logDeleteSuccess(&this->memberNode->addr, false, curMsg.transID, curMsg.key);
 				} else {
-					this->log->logDeleteFail(&this->memberNode->addr, false, curMsg.msgMeta.transID, curMsg.msgData.key);
+					this->log->logDeleteFail(&this->memberNode->addr, false, curMsg.transID, curMsg.key);
 				}
-				this->emulNet->ENsend(&this->memberNode->addr, &replyMsg.msgData.fromAddr, (char *)&replyMsg, (int)sizeof(replyMsg));
+				this->emulNet->ENsend(&this->memberNode->addr, &replyMsg.fromAddr, (char *)&replyMsg, (int)sizeof(replyMsg));
+				addTransactionHistory(replyMsg.key, replyMsg.value, replyMsg.type, replyMsg.transID);
+				break;
 			}
 			// When here node is coordinator.
 			case REPLY: {
 				// Check for quorum for the transID of the reply for updates.
-				WrapperMessage replyMsg = curMsg;
-				this->emulNet->ENsend(&this->memberNode->addr, &replyMsg.msgData.fromAddr, (char *)&replyMsg, (int)sizeof(replyMsg));
+				//WrapperMessage replyMsg = curMsg;
+				Message replyMsg = curMsg;
+				this->emulNet->ENsend(&this->memberNode->addr, &replyMsg.fromAddr, (char *)&replyMsg, (int)sizeof(replyMsg));
 			}
 			// When here node is coordinator.
 			case READREPLY: {
 				// Check for quorum for the transID of the read-reply for reads.
 				// Create helper method for checking for quorum.  Shouldn't have code directly in READREPLY or REPLY cases.
-				WrapperMessage replyMsg = curMsg;
-				this->emulNet->ENsend(&this->memberNode->addr, &replyMsg.msgData.fromAddr, (char *)&replyMsg, (int)sizeof(replyMsg));
+				// WrapperMessage replyMsg = curMsg;
+				Message replyMsg = curMsg;
+				this->emulNet->ENsend(&this->memberNode->addr, &replyMsg.fromAddr, (char *)&replyMsg, (int)sizeof(replyMsg));
 			}
 		}
 
